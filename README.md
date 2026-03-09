@@ -150,15 +150,19 @@ Round 1 achieved the best validation IoU; the model from Round 1 Epoch 8 was sel
 
 ### Section 6 — Grounding DINO Detection Pseudo-Labels & Detector Fine-Tuning
 
-**Grounding DINO** is a state-of-the-art zero-shot, text-prompted object detector. Unlike the circular approach of using the Sprint 2 detector to generate its own training labels, Grounding DINO is an independent external teacher.
+**Grounding DINO** is a state-of-the-art zero-shot, text-prompted object detector. 
+
+**Intuition behind using Grounding DINO as a strong teacher:**
+The existing detection model (from Sprint 2) was trained purely on BDD100K data and struggles heavily with the distinct appearance of Ghanaian traffic—particularly unique vehicle types like okada motorcycles, informal pedestrian crowds, and distinct vehicle profiles on unpaved roads. Instead of trying to force the weak model to adapt on its own or relying entirely on costly manual annotations, we use Grounding DINO as an external "strong teacher". 
+Because Grounding DINO connects vision directly with language (via CLIP embeddings), it has an incredibly robust understanding of object concepts that generalizes across domains. By prompting it textually, we can automatically generate high-quality pseudo bounding boxes on the hardest Ghanaian frames, which we then use to teach our lightweight, real-time detector.
 
 **How it works**:
 1. Grounding DINO receives a text prompt: `"car . taxi . bus . truck . lorry . person . pedestrian . motorcycle rider . motorcycle . motorbike . bicycle . traffic sign . traffic light ."`
-2. For each of the 72 hard negative frames, it detects objects matching these prompts
-3. Detected phrases are mapped to the 9-class BDD100K detection taxonomy
-4. Per-class NMS removes duplicate boxes (IoU threshold = 0.5)
+2. For each of the 72 hard negative frames, it detects objects matching these prompts based on its zero-shot knowledge.
+3. Detected phrases are mapped to the 9-class BDD100K detection taxonomy.
+4. Per-class NMS removes duplicate boxes (IoU threshold = 0.5).
 
-**Compatibility Note**: The `groundingdino-py` package requires two runtime patches for compatibility with transformers ≥ 4.45:
+**Compatibility Note**: The `groundingdino-py` package requires two runtime patches for compatibility with transformers >= 4.45:
 - `BertModel.get_head_mask` (removed in newer transformers, shimmed back)
 - `get_extended_attention_mask` (old code passes `device` where new API expects `dtype`)
 
@@ -166,8 +170,8 @@ Round 1 achieved the best validation IoU; the model from Round 1 Epoch 8 was sel
 
 **Detector Fine-Tuning**:
 - Backbone (ResNet-101) is frozen; only FPN + detection head are trained
-- 6 epochs on pseudo-labelled Ghana frames (oversampled 4×), no BDD100K source data was available in this run
-- Training loss decreased from 1.17 → 0.20
+- 6 epochs on pseudo-labelled Ghana frames (oversampled 4x), no BDD100K source data was available in this run
+- Training loss decreased from 1.17 -> 0.20
 
 ### Section 7 — Before/After Evaluation
 
